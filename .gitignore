@@ -1,0 +1,34 @@
+# Build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS / Rider
+.vs/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# EF / SQLite local DB (keep migrations in Git, ignore db file)
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets / local settings
+appsettings.Development.json
+secrets.json
+
+# Coverage
+TestResults/
+coverage/
