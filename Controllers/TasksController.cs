@@ -123,6 +123,39 @@ public class TasksController : ControllerBase
         return Ok(history);
     }
 
+     [HttpGet("due-soon")]
+    public async Task<ActionResult<List<TaskResponse>>> GetDueSoon([FromQuery] int days = 7)
+    {
+        if (days < 0)
+            return BadRequest("days must be >= 0.");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var endDate = today.AddDays(days);
+
+        var tasks = await _db.MaintenanceTasks
+            .Where(t => t.IsActive && t.NextDueDate >= today && t.NextDueDate <= endDate)
+            .OrderBy(t => t.NextDueDate)
+            .Select(t => ToResponse(t))
+            .ToListAsync();
+
+        return Ok(tasks);
+    }
+
+    [HttpGet("overdue")]
+    public async Task<ActionResult<List<TaskResponse>>> GetOverdue()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var tasks = await _db.MaintenanceTasks
+            .Where(t => t.IsActive && t.NextDueDate < today)
+            .OrderBy(t => t.NextDueDate)
+            .Select(t => ToResponse(t))
+            .ToListAsync();
+
+        return Ok(tasks);
+    }
+
+
     private static TaskResponse ToResponse(MaintenanceTask t) => new()
     {
         Id = t.Id,
