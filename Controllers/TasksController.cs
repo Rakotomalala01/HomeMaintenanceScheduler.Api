@@ -23,14 +23,12 @@ public class TasksController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TaskResponse>> Create([FromBody] CreateTaskRequest request)
     {
-        // Minimal validation (we’ll improve later)
         if (string.IsNullOrWhiteSpace(request.Title))
             return BadRequest("Title is required.");
 
         if (request.RecurrenceInterval <= 0)
             return BadRequest("RecurrenceInterval must be > 0.");
 
-        // If NextDueDate not provided, use StartDate as the initial due date
         var start = request.StartDate;
         var nextDue = request.NextDueDate ?? start;
 
@@ -66,9 +64,63 @@ public class TasksController : ControllerBase
     public async Task<ActionResult<TaskResponse>> GetById([FromRoute] int id)
     {
         var task = await _db.MaintenanceTasks.FirstOrDefaultAsync(t => t.Id == id);
-        if (task is null) return NotFound();
+        if (task is null)
+            return NotFound();
 
         return Ok(ToResponse(task));
+    }
+
+    [HttpPost("{id:int}/complete")]
+    public async Task<ActionResult<TaskResponse>> Complete([FromRoute] int id, [FromBody] CompleteTaskRequest request)
+    {
+        var task = await _db.MaintenanceTasks.FirstOrDefaultAsync(t => t.Id == id);
+        if (task is null)
+            return NotFound();
+
+        if (!task.IsActive)
+            return BadRequest("Task is inactive and cannot be completed.");
+
+        var completedAt = request.CompletedAt ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var completion = new TaskCompletion
+        {
+            TaskId = task.Id,
+            CompletedAt = completedAt,
+            Note = request.Note
+        };
+
+        _db.TaskCompletions.Add(completion);
+
+        task.NextDueDate = _recurrence.CalculateNextDueDate(
+            completedAt,
+            task.RecurrenceType,
+            task.RecurrenceInterval);
+
+        await _db.SaveChangesAsync();
+
+        return Ok(ToResponse(task));
+    }
+
+    [HttpGet("{id:int}/history")]
+    public async Task<ActionResult<List<TaskCompletionResponse>>> GetHistory([FromRoute] int id)
+    {
+        var taskExists = await _db.MaintenanceTasks.AnyAsync(t => t.Id == id);
+        if (!taskExists)
+            return NotFound();
+
+        var history = await _db.TaskCompletions
+            .Where(tc => tc.TaskId == id)
+            .OrderByDescending(tc => tc.CompletedAt)
+            .Select(tc => new TaskCompletionResponse
+            {
+                Id = tc.Id,
+                TaskId = tc.TaskId,
+                CompletedAt = tc.CompletedAt,
+                Note = tc.Note
+            })
+            .ToListAsync();
+
+        return Ok(history);
     }
 
     private static TaskResponse ToResponse(MaintenanceTask t) => new()
