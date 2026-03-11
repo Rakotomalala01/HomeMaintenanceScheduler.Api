@@ -13,7 +13,6 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<RecurrenceService>();
 builder.Services.AddScoped<DiscordNotifier>();
 builder.Services.AddScoped<ReminderScanService>();
-
 builder.Services.AddHostedService<ReminderWorker>();
 
 builder.Services.AddControllers();
@@ -22,7 +21,18 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+
 if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+else
 {
     app.UseSwagger();
     app.UseSwaggerUI();

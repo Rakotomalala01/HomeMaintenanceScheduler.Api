@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: home-maintenance-api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Discord__WebhookUrl: ${Discord__WebhookUrl}
+    volumes:
+      - home_maintenance_data:/app/data
+
+volumes:
+  home_maintenance_data:

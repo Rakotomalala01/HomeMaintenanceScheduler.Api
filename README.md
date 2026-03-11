@@ -1,44 +1,85 @@
-# Home Maintenance Scheduler API
+# Running the Project
 
-A lightweight **ASP.NET Core Web API** that manages recurring home maintenance tasks and automatically sends reminders to **Discord** when tasks are due or overdue.
+## 1. Clone the repository
 
-The system tracks maintenance history, calculates the next due date automatically, and prevents duplicate reminders.
+```
+git clone https://github.com/Rakotomalala01/home-maintenance-scheduler-api.git
+cd home-maintenance-scheduler-api
+```
 
 ---
 
-## Features
+## 2. Configure environment variables
 
-* Create and manage recurring maintenance tasks
-* Track task completion history
-* Automatically calculate next due dates
-* Detect **due soon** and **overdue** tasks
-* Send reminders to **Discord via webhook**
-* Prevent duplicate reminder notifications
-* Background worker that runs automatically
-* SQLite database using **Entity Framework Core**
-* Swagger UI for API testing
+Create a `.env` file in the project root.
+
+Example:
+
+```
+Discord__WebhookUrl=https://discord.com/api/webhooks/YOUR_WEBHOOK_URL
+```
+
+The `.env` file is used by Docker to inject environment variables into the application.
 
 ---
 
-## Architecture Overview
+## 3. Start the application with Docker
+
+Build and run the API using Docker Compose:
 
 ```
-Client / Swagger
-        │
-        ▼
-TasksController
-        │
-        ▼
-ReminderScanService
-        │
-        ▼
-DiscordNotifier
-        │
-        ▼
-Discord Webhook
+docker compose up --build
 ```
 
-Database (SQLite):
+This will:
+
+- Build the ASP.NET Core API container
+- Start the API server
+- Create the SQLite database automatically
+
+---
+
+## 4. Open Swagger
+
+Once the container is running, open:
+
+```
+http://localhost:8080/swagger
+```
+
+Swagger allows you to test all API endpoints.
+
+---
+
+# Docker Environment Variables
+
+The application reads configuration using environment variables.
+
+Example `.env` file:
+
+```
+Discord__WebhookUrl=https://discord.com/api/webhooks/your_webhook_here
+```
+
+The double underscore (`__`) maps to ASP.NET configuration sections:
+
+```
+Discord__WebhookUrl → Discord:WebhookUrl
+```
+
+---
+
+# Database
+
+The application uses **SQLite** for persistence.
+
+Docker mounts a volume so the database persists between container restarts.
+
+```
+home_maintenance.db
+```
+
+Tables created by EF Core:
 
 ```
 MaintenanceTasks
@@ -48,172 +89,12 @@ ReminderLogs
 
 ---
 
-## Technologies Used
+# Reminder Worker
 
-* ASP.NET Core (.NET)
-* Entity Framework Core
-* SQLite
-* Discord Webhooks
-* BackgroundService worker
-* Swagger (OpenAPI)
-* Git
+A background worker periodically scans the database for tasks that are:
 
----
-
-## Database Schema
-
-### MaintenanceTasks
-
-Stores recurring tasks.
-
-| Field              | Description               |
-| ------------------ | ------------------------- |
-| Id                 | Primary key               |
-| Title              | Task name                 |
-| Category           | Task category             |
-| RecurrenceType     | Days / Weeks / Months     |
-| RecurrenceInterval | Frequency                 |
-| StartDate          | Task start                |
-| NextDueDate        | Next scheduled occurrence |
-| IsActive           | Task enabled              |
-
----
-
-### TaskCompletions
-
-Stores completion history.
-
-| Field       | Description             |
-| ----------- | ----------------------- |
-| Id          | Completion event ID     |
-| TaskId      | Linked maintenance task |
-| CompletedAt | Date completed          |
-| Note        | Optional note           |
-
----
-
-### ReminderLogs
-
-Prevents duplicate reminders.
-
-| Field   | Description                       |
-| ------- | --------------------------------- |
-| Id      | Log entry                         |
-| TaskId  | Related task                      |
-| DueDate | Due date associated with reminder |
-| Type    | DueSoon / Overdue                 |
-| SentAt  | Timestamp                         |
-| Channel | Notification channel              |
-
----
-
-## API Endpoints
-
-### Tasks
-
-```
-POST   /tasks
-GET    /tasks
-GET    /tasks/{id}
-POST   /tasks/{id}/complete
-GET    /tasks/{id}/history
-```
-
-### Task Status
-
-```
-GET /tasks/due-soon?days=7
-GET /tasks/overdue
-```
-
-### Reminder System
-
-```
-POST /reminders/run
-```
-
----
-
-## Reminder Logic
-
-**Due Soon**
-
-```
-today <= NextDueDate <= today + configured days
-```
-
-Sent **once per due date**.
-
----
-
-**Overdue**
-
-```
-NextDueDate < today
-```
-
-Sent **once per day** until completed.
-
----
-
-## Running the Project
-
-### 1. Clone the repository
-
-```
-git clone https://github.com/Rakotomalala01/home-maintenance-scheduler-api.git
-cd home-maintenance-scheduler-api
-```
-
----
-
-### 2. Restore packages
-
-```
-dotnet restore
-```
-
----
-
-### 3. Create the database
-
-```
-dotnet tool run dotnet-ef database update
-```
-
----
-
-### 4. Configure Discord webhook
-
-Use **.NET User Secrets** (recommended).
-
-```
-dotnet user-secrets init
-dotnet user-secrets set "Discord:WebhookUrl" "YOUR_WEBHOOK_URL"
-```
-
----
-
-### 5. Run the API
-
-```
-dotnet run
-```
-
-Open Swagger:
-
-```
-http://localhost:5113/swagger
-```
-
----
-
-## Reminder Worker
-
-A background worker runs periodically and scans for tasks that are:
-
-* Due soon
-* Overdue
+- Due soon
+- Overdue
 
 It sends reminders through the configured Discord webhook.
 
@@ -225,43 +106,28 @@ ReminderSettings:
   WorkerIntervalMinutes
 ```
 
----
-
-## Example Discord Reminder
+Example configuration:
 
 ```
-🔧 Due soon: Clean dryer vent (Due: 2026-03-11)
+DueSoonDays = 3
+WorkerIntervalMinutes = 1440
 ```
 
-```
-🚨 Overdue: Replace smoke detector batteries (Due: 2026-03-01)
-```
+The worker runs **once per day** by default.
 
 ---
 
-## Project Structure
+# Stopping the Application
+
+To stop the Docker container:
 
 ```
-Controllers/
-Background/
-Services/
-Entities/
-Models/
-Data/
+docker compose down
 ```
 
 ---
 
-## Future Improvements
+# Future Improvements
 
-* Docker support
-* Discord embed messages
-* Task categories enum
-* Authentication for API
-* Web UI dashboard
-
----
-
-## License
-
-MIT
+- Task category enums
+- Web UI dashboard

@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+.idea/
+.git/
+.gitignore
+README.md
+docs/
+home_maintenance.db
+home_maintenance.db-shm
+home_maintenance.db-wal
+.env
+.env.*

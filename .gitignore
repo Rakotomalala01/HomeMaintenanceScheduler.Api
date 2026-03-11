@@ -25,6 +25,8 @@ Thumbs.db
 *.db-shm
 *.db-wal
 
+.env
+
 # Secrets / local settings
 appsettings.Development.json
 secrets.json
